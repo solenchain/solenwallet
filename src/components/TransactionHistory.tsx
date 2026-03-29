@@ -69,6 +69,8 @@ export function TransactionHistory() {
 
   useEffect(() => {
     fetchTxs();
+    const interval = setInterval(fetchTxs, 10000);
+    return () => clearInterval(interval);
   }, [fetchTxs]);
 
   if (!activeAccount) return null;
@@ -81,10 +83,32 @@ export function TransactionHistory() {
     return null;
   };
 
+  const getStakeInfo = (tx: Transaction) => {
+    const event = tx.events.find((e) => e.topic === "delegate" || e.topic === "undelegate");
+    if (!event) return null;
+    // Data: validator[64 hex] + amount[32 hex LE u128]
+    if (event.data.length >= 96) {
+      return { amount: leHexToAmount(event.data.slice(64, 96)), type: event.topic };
+    }
+    // Old format: just amount
+    if (event.data.length >= 32) {
+      return { amount: leHexToAmount(event.data.slice(0, 32)), type: event.topic };
+    }
+    return null;
+  };
+
+  const getRewardInfo = (tx: Transaction) => {
+    const event = tx.events.find((e) => e.topic === "epoch_reward");
+    if (!event || event.data.length < 96) return null;
+    return { amount: leHexToAmount(event.data.slice(64, 96)) };
+  };
+
   const getTxType = (tx: Transaction): string => {
     if (tx.events.some((e) => e.topic === "transfer")) return "Transfer";
+    if (tx.events.some((e) => e.topic === "delegate")) return "Stake";
+    if (tx.events.some((e) => e.topic === "undelegate")) return "Unstake";
+    if (tx.events.some((e) => e.topic === "epoch_reward")) return "Reward";
     if (tx.events.some((e) => e.topic === "deploy")) return "Deploy";
-    if (tx.events.some((e) => e.topic === "call")) return "Call";
     return "Transaction";
   };
 
@@ -149,6 +173,23 @@ export function TransactionHistory() {
                     return (
                       <div className={`text-sm font-medium ${sent ? "text-red-400" : "text-emerald-400"}`}>
                         {sent ? "-" : "+"}{formatBalance(transfer.amount)} SOLEN
+                      </div>
+                    );
+                  }
+                  const stake = getStakeInfo(tx);
+                  if (stake) {
+                    const isDelegate = stake.type === "delegate";
+                    return (
+                      <div className={`text-sm font-medium ${isDelegate ? "text-blue-400" : "text-orange-400"}`}>
+                        {isDelegate ? "Stake " : "Unstake "}{formatBalance(stake.amount)} SOLEN
+                      </div>
+                    );
+                  }
+                  const reward = getRewardInfo(tx);
+                  if (reward) {
+                    return (
+                      <div className="text-sm font-medium text-amber-400">
+                        +{formatBalance(reward.amount)} SOLEN
                       </div>
                     );
                   }
