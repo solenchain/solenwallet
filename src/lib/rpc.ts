@@ -6,7 +6,7 @@ let requestId = 0;
 export async function rpcCall<T>(
   network: NetworkId,
   method: string,
-  params: Record<string, unknown> = {},
+  params: unknown[] | Record<string, unknown> = [],
 ): Promise<T> {
   const url = networks[network].rpcUrl;
   const id = ++requestId;
@@ -57,15 +57,15 @@ export function getChainStatus(network: NetworkId) {
 }
 
 export function getBalance(network: NetworkId, accountId: string) {
-  return rpcCall<string>(network, "solen_getBalance", { account_id: accountId });
+  return rpcCall<string>(network, "solen_getBalance", [accountId]);
 }
 
 export function getAccount(network: NetworkId, accountId: string) {
-  return rpcCall<AccountInfo>(network, "solen_getAccount", { account_id: accountId });
+  return rpcCall<AccountInfo>(network, "solen_getAccount", [accountId]);
 }
 
 export function getBlock(network: NetworkId, height: number) {
-  return rpcCall<BlockInfo>(network, "solen_getBlock", { height });
+  return rpcCall<BlockInfo>(network, "solen_getBlock", [height]);
 }
 
 export function getLatestBlock(network: NetworkId) {
@@ -90,14 +90,14 @@ export interface Action {
 }
 
 export function submitOperation(network: NetworkId, operation: UserOperation) {
-  return rpcCall<{ op_hash: string }>(network, "solen_submitOperation", { operation });
+  return rpcCall<{ op_hash: string }>(network, "solen_submitOperation", [operation]);
 }
 
 export function simulateOperation(network: NetworkId, operation: UserOperation) {
   return rpcCall<{ success: boolean; gas_used: number; error?: string }>(
     network,
     "solen_simulateOperation",
-    { operation },
+    [operation],
   );
 }
 
@@ -119,9 +119,9 @@ export interface StakingInfo {
 }
 
 export function getValidators(network: NetworkId) {
-  return rpcCall<ValidatorInfo[]>(network, "solen_getValidators");
+  return rpcCall<ValidatorInfo[]>(network, "solen_getValidators", []);
 }
 
 export function getStakingInfo(network: NetworkId, accountId: string) {
-  return rpcCall<StakingInfo>(network, "solen_getStakingInfo", { account_id: accountId });
+  return rpcCall<StakingInfo>(network, "solen_getStakingInfo", [accountId]);
 }
