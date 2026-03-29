@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "../lib/context";
 import { networks } from "../lib/networks";
+import { httpFetch } from "../lib/http";
 import { formatBalance } from "../lib/wallet";
 
 interface Transaction {
@@ -29,7 +30,7 @@ export function TransactionHistory() {
 
     try {
       const apiUrl = networks[network].explorerApiUrl;
-      const res = await fetch(
+      const res = await httpFetch(
         `${apiUrl}/api/accounts/${activeAccount.accountId}/txs?limit=20`,
       );
       if (!res.ok) throw new Error(`Failed to fetch transactions`);

@@ -1,4 +1,5 @@
 import { networks, type NetworkId } from "./networks";
+import { httpFetch } from "./http";
 
 export interface FaucetStatus {
   faucet_account: string;
@@ -17,7 +18,7 @@ export async function getFaucetStatus(network: NetworkId): Promise<FaucetStatus>
   const url = networks[network].faucetUrl;
   if (!url) throw new Error("Faucet not available on this network");
 
-  const res = await fetch(`${url}/status`);
+  const res = await httpFetch(`${url}/status`);
   if (!res.ok) throw new Error(`Faucet status failed: ${res.status}`);
   return res.json();
 }
@@ -29,7 +30,7 @@ export async function requestDrip(
   const url = networks[network].faucetUrl;
   if (!url) throw new Error("Faucet not available on this network");
 
-  const res = await fetch(`${url}/drip`, {
+  const res = await httpFetch(`${url}/drip`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ recipient: accountId }),

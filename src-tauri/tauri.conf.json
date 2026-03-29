@@ -1,5 +1,4 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicegui/nicegui/main/tauri.conf.json",
   "productName": "Solen Wallet",
   "version": "0.1.0",
   "identifier": "com.solen.wallet",
@@ -23,6 +22,16 @@
     ],
     "security": {
       "csp": null
+    }
+  },
+  "plugins": {
+    "http": {
+      "scope": {
+        "allow": [
+          { "url": "https://*.solenchain.com/**" },
+          { "url": "http://127.0.0.1:*/**" }
+        ]
+      }
     }
   },
   "bundle": {

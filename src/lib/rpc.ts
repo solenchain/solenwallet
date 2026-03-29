@@ -1,4 +1,5 @@
 import { networks, type NetworkId } from "./networks";
+import { httpFetch } from "./http";
 
 let requestId = 0;
 
@@ -10,7 +11,7 @@ export async function rpcCall<T>(
   const url = networks[network].rpcUrl;
   const id = ++requestId;
 
-  const res = await fetch(url, {
+  const res = await httpFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
