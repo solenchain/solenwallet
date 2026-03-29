@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useWallet } from "../lib/context";
 import { submitOperation, type UserOperation } from "../lib/rpc";
-import { parseAmount, signMessage } from "../lib/wallet";
+import { parseAmount, signMessage, buildSigningMessage } from "../lib/wallet";
 import { encryptOperation } from "../lib/encrypted";
+import { hexToBytes } from "@noble/hashes/utils";
 
 
 export function SendForm() {
@@ -37,8 +38,12 @@ export function SendForm() {
         signature: "",
       };
 
-      const opBytes = new TextEncoder().encode(JSON.stringify(operation));
-      operation.signature = await signMessage(activeAccount.secretKey, opBytes);
+      // Build signing message matching the Rust node format.
+      const senderBytes = Array.from(hexToBytes(activeAccount.accountId));
+      const toBytes = Array.from(hexToBytes(recipient));
+      const rustActions = [{ Transfer: { to: toBytes, amount: parseInt(rawAmount) } }];
+      const sigMsg = buildSigningMessage(senderBytes, 0, 10000, rustActions);
+      operation.signature = await signMessage(activeAccount.secretKey, sigMsg);
 
       if (mevProtected) {
         const opJson = JSON.stringify(operation);

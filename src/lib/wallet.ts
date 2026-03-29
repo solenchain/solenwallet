@@ -1,5 +1,6 @@
 import * as ed25519 from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha2";
+import { blake3 } from "@noble/hashes/blake3";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 
 // ed25519 v3 requires sha512 configured for async operations
@@ -81,6 +82,42 @@ export async function importAccount(name: string, secretKey: string): Promise<Wa
     publicKey: kp.publicKey,
     secretKey: kp.secretKey,
   };
+}
+
+/**
+ * Build the signing message for a UserOperation, matching the Rust node's format:
+ * sender[32] + nonce[8 LE] + max_fee[16 LE] + blake3(json(actions))[32]
+ *
+ * The `rustActions` parameter should be the actions in Rust serde format
+ * (e.g., [{ "Transfer": { "to": [...], "amount": 100 } }]).
+ */
+export function buildSigningMessage(
+  senderBytes: number[],
+  nonce: number,
+  maxFee: number,
+  rustActions: unknown[],
+): Uint8Array {
+  const msg = new Uint8Array(32 + 8 + 16 + 32); // 88 bytes total
+
+  // sender[32]
+  msg.set(senderBytes, 0);
+
+  // nonce[8 LE]
+  const nonceView = new DataView(new ArrayBuffer(8));
+  nonceView.setBigUint64(0, BigInt(nonce), true);
+  msg.set(new Uint8Array(nonceView.buffer), 32);
+
+  // max_fee[16 LE] (u128 — just use first 8 bytes, rest zero)
+  const feeView = new DataView(new ArrayBuffer(16));
+  feeView.setBigUint64(0, BigInt(maxFee), true);
+  msg.set(new Uint8Array(feeView.buffer), 40);
+
+  // blake3(json(actions))[32]
+  const actionsJson = JSON.stringify(rustActions);
+  const actionsHash = blake3(new TextEncoder().encode(actionsJson));
+  msg.set(actionsHash.slice(0, 32), 56);
+
+  return msg;
 }
 
 export function formatBalance(raw: string): string {

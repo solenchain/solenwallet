@@ -8,7 +8,8 @@ import {
   type StakingInfo,
   type UserOperation,
 } from "../lib/rpc";
-import { formatBalance, parseAmount, signMessage } from "../lib/wallet";
+import { formatBalance, parseAmount, signMessage, buildSigningMessage } from "../lib/wallet";
+import { hexToBytes } from "@noble/hashes/utils";
 
 const STAKING_ADDRESS = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01";
 
@@ -68,6 +69,8 @@ export function StakingCard() {
 
       const args = validatorHex + amountHex;
 
+      const method = action === "stake" ? "delegate" : "undelegate";
+
       const operation: UserOperation = {
         sender: activeAccount.accountId,
         nonce: 0,
@@ -75,7 +78,7 @@ export function StakingCard() {
           {
             type: "call",
             to: STAKING_ADDRESS,
-            method: action === "stake" ? "delegate" : "undelegate",
+            method,
             args,
           },
         ],
@@ -83,8 +86,13 @@ export function StakingCard() {
         signature: "",
       };
 
-      const opBytes = new TextEncoder().encode(JSON.stringify(operation));
-      operation.signature = await signMessage(activeAccount.secretKey, opBytes);
+      // Build the signing message matching the Rust node format.
+      const senderBytes = Array.from(hexToBytes(activeAccount.accountId));
+      const targetBytes = Array.from(hexToBytes(STAKING_ADDRESS));
+      const argsBytes = Array.from(hexToBytes(args));
+      const rustActions = [{ Call: { target: targetBytes, method, args: argsBytes } }];
+      const sigMsg = buildSigningMessage(senderBytes, 0, 100000, rustActions);
+      operation.signature = await signMessage(activeAccount.secretKey, sigMsg);
 
       await submitOperation(network, operation);
       setResult({
