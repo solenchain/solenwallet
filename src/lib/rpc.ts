@@ -11,10 +11,13 @@ export async function rpcCall<T>(
   const url = networks[network].rpcUrl;
   const id = ++requestId;
 
+  const body = JSON.stringify({ jsonrpc: "2.0", id, method, params });
+  console.log("[RPC Request]", method, body.slice(0, 1000));
+
   const res = await httpFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
+    body,
   });
 
   if (!res.ok) {
