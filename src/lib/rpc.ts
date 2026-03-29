@@ -89,15 +89,72 @@ export interface Action {
   code?: string;
 }
 
+/**
+ * Convert wallet-friendly operation format to Rust serde format.
+ *
+ * Wallet uses: { sender: "hex", actions: [{ type: "transfer", to: "hex", amount: "123" }] }
+ * Rust expects: { sender: [1,2,3...], actions: [{ Transfer: { to: [1,2,3...], amount: 123 } }] }
+ */
+function toRustOperation(op: UserOperation): Record<string, unknown> {
+  const sender = hexToBytes(op.sender);
+  const signature = op.signature ? hexToBytes(op.signature) : [];
+
+  const actions = op.actions.map((action) => {
+    switch (action.type) {
+      case "transfer":
+        return {
+          Transfer: {
+            to: hexToBytes(action.to || ""),
+            amount: parseInt(action.amount || "0"),
+          },
+        };
+      case "call":
+        return {
+          Call: {
+            target: hexToBytes(action.to || ""),
+            method: action.method || "",
+            args: action.args ? hexToBytes(action.args) : [],
+          },
+        };
+      case "deploy":
+        return {
+          Deploy: {
+            code: action.code ? hexToBytes(action.code) : [],
+            salt: new Array(32).fill(0),
+          },
+        };
+      default:
+        return action;
+    }
+  });
+
+  return {
+    sender,
+    nonce: op.nonce,
+    actions,
+    max_fee: parseInt(op.max_fee || "10000"),
+    signature,
+  };
+}
+
+function hexToBytes(hex: string): number[] {
+  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+  const bytes: number[] = [];
+  for (let i = 0; i < clean.length; i += 2) {
+    bytes.push(parseInt(clean.substring(i, i + 2), 16));
+  }
+  return bytes;
+}
+
 export function submitOperation(network: NetworkId, operation: UserOperation) {
-  return rpcCall<{ op_hash: string }>(network, "solen_submitOperation", [operation]);
+  return rpcCall<{ op_hash: string }>(network, "solen_submitOperation", [toRustOperation(operation)]);
 }
 
 export function simulateOperation(network: NetworkId, operation: UserOperation) {
   return rpcCall<{ success: boolean; gas_used: number; error?: string }>(
     network,
     "solen_simulateOperation",
-    [operation],
+    [toRustOperation(operation)],
   );
 }
 
