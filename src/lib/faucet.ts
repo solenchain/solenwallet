@@ -33,7 +33,7 @@ export async function requestDrip(
   const res = await httpFetch(`${url}/drip`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ recipient: accountId }),
+    body: JSON.stringify({ account: accountId }),
   });
 
   if (!res.ok) {
