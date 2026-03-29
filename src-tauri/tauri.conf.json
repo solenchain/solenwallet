@@ -10,7 +10,6 @@
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "title": "Solen Wallet",
     "windows": [
       {
         "title": "Solen Wallet",
