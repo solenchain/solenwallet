@@ -38,7 +38,7 @@ export function SendForm() {
 
       // Sign the operation
       const opBytes = new TextEncoder().encode(JSON.stringify(operation));
-      operation.signature = signMessage(activeAccount.secretKey, opBytes);
+      operation.signature = await signMessage(activeAccount.secretKey, opBytes);
 
       const res = await submitOperation(network, operation);
       setResult({

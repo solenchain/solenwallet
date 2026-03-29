@@ -2,8 +2,8 @@ import * as ed25519 from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha2";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 
-// ed25519 v3 requires sha512 configured via etc
-(ed25519.etc as Record<string, unknown>).sha512Sync = (...m: Uint8Array[]) =>
+// ed25519 v3 requires sha512 configured for async operations
+(ed25519.etc as Record<string, unknown>).sha512Async = async (...m: Uint8Array[]) =>
   sha512(ed25519.etc.concatBytes(...m));
 
 export interface Keypair {
@@ -18,27 +18,27 @@ export interface WalletAccount {
   secretKey: string; // encrypted or raw for now
 }
 
-export function generateKeypair(): Keypair {
+export async function generateKeypair(): Promise<Keypair> {
   const privKey = ed25519.utils.randomSecretKey();
-  const pubKey = ed25519.getPublicKey(privKey);
+  const pubKey = await ed25519.getPublicKeyAsync(privKey);
   return {
     publicKey: bytesToHex(pubKey),
     secretKey: bytesToHex(privKey) + bytesToHex(pubKey),
   };
 }
 
-export function keypairFromSecret(secretHex: string): Keypair {
+export async function keypairFromSecret(secretHex: string): Promise<Keypair> {
   const privBytes = hexToBytes(secretHex.slice(0, 64));
-  const pubKey = ed25519.getPublicKey(privBytes);
+  const pubKey = await ed25519.getPublicKeyAsync(privBytes);
   return {
     publicKey: bytesToHex(pubKey),
     secretKey: secretHex.slice(0, 64) + bytesToHex(pubKey),
   };
 }
 
-export function signMessage(secretHex: string, message: Uint8Array): string {
+export async function signMessage(secretHex: string, message: Uint8Array): Promise<string> {
   const privBytes = hexToBytes(secretHex.slice(0, 64));
-  const sig = ed25519.sign(message, privBytes);
+  const sig = await ed25519.signAsync(message, privBytes);
   return bytesToHex(sig);
 }
 
@@ -62,8 +62,8 @@ export function saveAccounts(accounts: WalletAccount[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
 }
 
-export function createAccount(name: string): WalletAccount {
-  const kp = generateKeypair();
+export async function createAccount(name: string): Promise<WalletAccount> {
+  const kp = await generateKeypair();
   return {
     name,
     accountId: publicKeyToAccountId(kp.publicKey),
@@ -72,8 +72,8 @@ export function createAccount(name: string): WalletAccount {
   };
 }
 
-export function importAccount(name: string, secretKey: string): WalletAccount {
-  const kp = keypairFromSecret(secretKey);
+export async function importAccount(name: string, secretKey: string): Promise<WalletAccount> {
+  const kp = await keypairFromSecret(secretKey);
   return {
     name,
     accountId: publicKeyToAccountId(kp.publicKey),

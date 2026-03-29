@@ -16,18 +16,22 @@ export function CreateAccountModal({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!name.trim()) {
       setError("Please enter an account name");
       return;
     }
-    const acc = createAccount(name.trim());
-    addAccount(acc);
-    reset();
-    onClose();
+    try {
+      const acc = await createAccount(name.trim());
+      addAccount(acc);
+      reset();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create account");
+    }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!name.trim()) {
       setError("Please enter an account name");
       return;
@@ -37,7 +41,7 @@ export function CreateAccountModal({ open, onClose }: Props) {
       return;
     }
     try {
-      const acc = importAccount(name.trim(), secretKey.trim());
+      const acc = await importAccount(name.trim(), secretKey.trim());
       addAccount(acc);
       reset();
       onClose();
