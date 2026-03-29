@@ -92,7 +92,6 @@ export function FaucetCard() {
         <div className="mt-2 text-xs text-gray-500 space-y-1">
           <div>Drip amount: {formatBalance(status.drip_amount)} SOLEN</div>
           <div>Cooldown: {status.cooldown_secs}s</div>
-          <div>Faucet balance: {formatBalance(status.balance)} SOLEN</div>
         </div>
       )}
     </div>

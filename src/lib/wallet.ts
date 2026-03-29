@@ -43,8 +43,9 @@ export async function signMessage(secretHex: string, message: Uint8Array): Promi
 }
 
 export function publicKeyToAccountId(pubKeyHex: string): string {
-  // Account ID is the public key hex padded to 64 chars
-  return pubKeyHex.padStart(64, "0");
+  // Account ID IS the public key. No derivation needed.
+  // Ed25519 public keys are always 32 bytes (64 hex chars).
+  return pubKeyHex;
 }
 
 const STORAGE_KEY = "solen_wallet_accounts";
