@@ -14,8 +14,8 @@ export const networks: Record<NetworkId, NetworkConfig> = {
   mainnet: {
     id: "mainnet",
     name: "Mainnet",
-    rpcUrl: "http://127.0.0.1:9944",
-    explorerApiUrl: "http://127.0.0.1:9955",
+    rpcUrl: "https://rpc.solenchain.com",
+    explorerApiUrl: "https://api.solenchain.com",
     faucetUrl: null,
     color: "#10b981",
     enabled: true,
@@ -23,9 +23,9 @@ export const networks: Record<NetworkId, NetworkConfig> = {
   testnet: {
     id: "testnet",
     name: "Testnet",
-    rpcUrl: "http://127.0.0.1:19944",
-    explorerApiUrl: "http://127.0.0.1:19955",
-    faucetUrl: "http://127.0.0.1:19966",
+    rpcUrl: "https://testnet-rpc.solenchain.com",
+    explorerApiUrl: "https://testnet-api.solenchain.com",
+    faucetUrl: "https://testnet-faucet.solenchain.com",
     color: "#f59e0b",
     enabled: true,
   },
@@ -40,4 +40,4 @@ export const networks: Record<NetworkId, NetworkConfig> = {
   },
 };
 
-export const DEFAULT_NETWORK: NetworkId = "devnet";
+export const DEFAULT_NETWORK: NetworkId = "testnet";
