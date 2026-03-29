@@ -10,7 +10,7 @@ import {
 } from "../lib/rpc";
 import { formatBalance, parseAmount, signMessage } from "../lib/wallet";
 
-const STAKING_ADDRESS = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01";
+const STAKING_ADDRESS = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01";
 
 export function StakingCard() {
   const { network, activeAccount } = useWallet();
