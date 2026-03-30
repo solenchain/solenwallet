@@ -20,7 +20,7 @@ interface TokenInfo {
 // Hardcoded known token contracts per network (discovered tokens added dynamically).
 const KNOWN_TOKENS: Record<string, string[]> = {
   testnet: [
-    "999019653eac5156c6098d111ec47652136faba73178a2cd32006e5ed2796516",
+    "7efd4515fcea2a83b0b0c12a154b82ca7fc432d1a125406f5973fa7a72a1ccdf",
   ],
   devnet: [],
   mainnet: [],
