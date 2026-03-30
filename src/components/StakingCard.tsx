@@ -157,7 +157,10 @@ export function StakingCard() {
               }`}
             >
               <span className="font-mono">{v.address.slice(0, 16)}...</span>
-              <span>{formatBalance(v.total_stake)} staked</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500">{((v.commission_bps || 1000) / 100).toFixed(0)}% fee</span>
+                <span>{formatBalance(v.total_stake)} staked</span>
+              </div>
             </button>
           ))}
           {validators.length === 0 && (

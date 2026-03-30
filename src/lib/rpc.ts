@@ -170,6 +170,7 @@ export interface ValidatorInfo {
   total_stake: string;
   is_active: boolean;
   is_genesis: boolean;
+  commission_bps: number;
 }
 
 export interface StakingInfo {
