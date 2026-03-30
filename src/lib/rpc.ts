@@ -186,3 +186,18 @@ export function getValidators(network: NetworkId) {
 export function getStakingInfo(network: NetworkId, accountId: string) {
   return rpcCall<StakingInfo>(network, "solen_getStakingInfo", [accountId]);
 }
+
+// Vesting
+
+export interface VestingInfo {
+  has_schedule: boolean;
+  total_amount: string;
+  vested: string;
+  claimed: string;
+  claimable: string;
+  vesting_type: string;
+}
+
+export function getVestingInfo(network: NetworkId, accountId: string) {
+  return rpcCall<VestingInfo>(network, "solen_getVestingInfo", [accountId]);
+}
