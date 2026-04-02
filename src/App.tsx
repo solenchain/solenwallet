@@ -103,10 +103,59 @@ function TabContent({ tab }: { tab: Tab }) {
   }
 }
 
+function LockScreen() {
+  const { unlock } = useWallet();
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    const ok = await unlock(password);
+    if (!ok) setError("Wrong password");
+    setPassword("");
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="text-center max-w-sm w-full px-4">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-indigo-500/20 flex items-center justify-center">
+          <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-gray-200 mb-2">Wallet Locked</h2>
+        <p className="text-gray-500 text-sm mb-6">Enter your password to unlock</p>
+        <form onSubmit={handleUnlock} className="space-y-3">
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            autoFocus
+            className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500/50"
+          />
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+          <button
+            type="submit"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl transition-colors"
+          >
+            Unlock
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function WalletDashboard() {
-  const { activeAccount, accounts } = useWallet();
+  const { activeAccount, accounts, isLocked, hasPassword } = useWallet();
   const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("wallet");
+
+  if (isLocked && hasPassword) {
+    return <LockScreen />;
+  }
 
   if (accounts.length === 0) {
     return (
