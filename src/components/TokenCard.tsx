@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useWallet } from "../lib/context";
 import {
   getAccount,
@@ -59,8 +59,12 @@ export function TokenCard() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Cache token metadata (name/symbol/decimals) — these don't change.
+  const metaCacheRef = useRef<Map<string, { name: string; symbol: string; decimals: number }>>(new Map());
+
   useEffect(() => {
     if (!activeAccount) return;
+    let cancelled = false;
 
     const fetchTokens = async () => {
       // Discover token contracts from the explorer indexer API.
@@ -72,34 +76,54 @@ export function TokenCard() {
           contracts = await res.json();
         }
       } catch {}
-      const found: TokenInfo[] = [];
 
-      for (const contract of contracts) {
-        try {
-          const [balRes, nameRes, symRes, decRes] = await Promise.all([
-            callView(network, contract, "balance_of", activeAccount.accountId),
-            callView(network, contract, "name"),
-            callView(network, contract, "symbol"),
-            callView(network, contract, "decimals"),
-          ]);
+      // Fetch all contracts in parallel.
+      const results = await Promise.all(
+        contracts.map(async (contract): Promise<TokenInfo | null> => {
+          try {
+            const cached = metaCacheRef.current.get(contract);
 
-          const balance = balRes.success ? hexToU128(balRes.return_data) : BigInt(0);
-          const name = nameRes.success
-            ? new TextDecoder().decode(hexToBytes(nameRes.return_data))
-            : contract.slice(0, 12) + "...";
-          const symbol = symRes.success
-            ? new TextDecoder().decode(hexToBytes(symRes.return_data))
-            : "???";
-          const decimals = decRes.success && decRes.return_data.length >= 2
-            ? parseInt(decRes.return_data.slice(0, 2), 16)
-            : 8;
+            // Always fetch balance; only fetch metadata if not cached.
+            const balPromise = callView(network, contract, "balance_of", activeAccount.accountId);
+            let name: string, symbol: string, decimals: number;
 
-          found.push({ contract, name, symbol, balance, decimals });
-        } catch {
-          // Contract not accessible.
-        }
-      }
+            if (cached) {
+              name = cached.name;
+              symbol = cached.symbol;
+              decimals = cached.decimals;
+              const balRes = await balPromise;
+              const balance = balRes.success ? hexToU128(balRes.return_data) : BigInt(0);
+              return { contract, name, symbol, balance, decimals };
+            }
 
+            const [balRes, nameRes, symRes, decRes] = await Promise.all([
+              balPromise,
+              callView(network, contract, "name"),
+              callView(network, contract, "symbol"),
+              callView(network, contract, "decimals"),
+            ]);
+
+            const balance = balRes.success ? hexToU128(balRes.return_data) : BigInt(0);
+            name = nameRes.success
+              ? new TextDecoder().decode(hexToBytes(nameRes.return_data))
+              : contract.slice(0, 12) + "...";
+            symbol = symRes.success
+              ? new TextDecoder().decode(hexToBytes(symRes.return_data))
+              : "???";
+            decimals = decRes.success && decRes.return_data.length >= 2
+              ? parseInt(decRes.return_data.slice(0, 2), 16)
+              : 8;
+
+            metaCacheRef.current.set(contract, { name, symbol, decimals });
+            return { contract, name, symbol, balance, decimals };
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (cancelled) return;
+      const found = results.filter((t): t is TokenInfo => t !== null);
       setTokens(found);
       if (found.length > 0 && !selectedToken) {
         setSelectedToken(found[0].contract);
@@ -108,7 +132,7 @@ export function TokenCard() {
 
     fetchTokens();
     const interval = setInterval(fetchTokens, 15000);
-    return () => clearInterval(interval);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [network, activeAccount]);
 
   const handleTransfer = async (e: React.FormEvent) => {
