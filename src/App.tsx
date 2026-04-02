@@ -9,6 +9,7 @@ import { VestingCard } from "./components/VestingCard";
 import { TokenCard } from "./components/TokenCard";
 import { TransactionHistory } from "./components/TransactionHistory";
 import { AccountDetails } from "./components/AccountDetails";
+import { GovernanceCard } from "./components/GovernanceCard";
 import { CreateAccountModal } from "./components/CreateAccountModal";
 
 type Tab = "wallet" | "tokens" | "staking" | "governance" | "account";
@@ -92,7 +93,7 @@ function TabContent({ tab }: { tab: Tab }) {
         </div>
       );
     case "governance":
-      return <GovernanceTab />;
+      return <GovernanceCard />;
     case "account":
       return (
         <div className="space-y-6">
@@ -100,36 +101,6 @@ function TabContent({ tab }: { tab: Tab }) {
         </div>
       );
   }
-}
-
-function GovernanceTab() {
-  return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
-      <h3 className="text-lg font-semibold text-gray-200 mb-4">Governance</h3>
-      <p className="text-sm text-gray-400 mb-4">
-        View and vote on governance proposals. Proposals require staked tokens to vote.
-      </p>
-      <div className="text-center py-8 text-gray-500">
-        <svg className="w-12 h-12 mx-auto mb-3 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-        <p className="text-sm">
-          View proposals on{" "}
-          <a
-            href="https://testnet.solenchain.io/governance"
-            target="_blank"
-            rel="noopener"
-            className="text-emerald-400 hover:text-emerald-300"
-          >
-            SolenScan
-          </a>
-        </p>
-        <p className="text-xs text-gray-600 mt-2">
-          Use the CLI to submit proposals and vote: solen-cli vote &lt;key&gt; &lt;proposal-id&gt; --yes &lt;weight&gt;
-        </p>
-      </div>
-    </div>
-  );
 }
 
 function WalletDashboard() {

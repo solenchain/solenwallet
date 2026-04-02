@@ -202,6 +202,25 @@ export function getVestingInfo(network: NetworkId, accountId: string) {
   return rpcCall<VestingInfo>(network, "solen_getVestingInfo", [accountId]);
 }
 
+// Governance
+
+export interface GovernanceProposal {
+  id: number;
+  proposer: string;
+  action: string;
+  description: string;
+  status: string;
+  voting_end_epoch: number;
+  execute_after_epoch: number;
+  total_for: string;
+  total_against: string;
+  vote_count: number;
+}
+
+export function getGovernanceProposals(network: NetworkId) {
+  return rpcCall<GovernanceProposal[]>(network, "solen_getGovernanceProposals", []);
+}
+
 // Contract view calls
 
 export interface CallViewResult {
