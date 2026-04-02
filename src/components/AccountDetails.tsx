@@ -137,29 +137,7 @@ function PrintPreviewModal({
   });
 
   const handlePrint = () => {
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.top = "-10000px";
-    iframe.style.left = "-10000px";
-    iframe.style.width = "800px";
-    iframe.style.height = "600px";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) { document.body.removeChild(iframe); return; }
-
-    doc.open();
-    doc.write(buildPrintHtml(account, network, now));
-    doc.close();
-
-    // Wait for content to render, then print
-    setTimeout(() => {
-      iframe.contentWindow?.print();
-      // Clean up after print dialog closes
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
-    }, 250);
+    window.print();
   };
 
   return (
@@ -189,8 +167,8 @@ function PrintPreviewModal({
         </div>
 
         <div className="overflow-y-auto p-6">
-          {/* Preview */}
-          <div className="bg-white text-gray-900 rounded-xl p-8 shadow-inner text-sm">
+          {/* Preview — also used as print content */}
+          <div className="print-content bg-white text-gray-900 rounded-xl p-8 shadow-inner text-sm">
             <div className="flex items-center gap-3 mb-6 pb-3 border-b-2 border-emerald-500">
               <div>
                 <div className="text-xl font-bold">

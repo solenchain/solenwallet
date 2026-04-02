@@ -19,3 +19,23 @@ body {
   background: #374151;
   border-radius: 3px;
 }
+
+/* Print: hide app, show only .print-content */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-content,
+  .print-content * {
+    visibility: visible;
+  }
+  .print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: black !important;
+    padding: 24px !important;
+  }
+}
