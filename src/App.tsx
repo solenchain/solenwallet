@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { WalletProvider, useWallet } from "./lib/context";
 import { Header } from "./components/Header";
 import { BalanceCard } from "./components/BalanceCard";
@@ -11,9 +11,131 @@ import { TransactionHistory } from "./components/TransactionHistory";
 import { AccountDetails } from "./components/AccountDetails";
 import { CreateAccountModal } from "./components/CreateAccountModal";
 
+type Tab = "wallet" | "tokens" | "staking" | "governance" | "account";
+
+const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
+  {
+    id: "wallet",
+    label: "Wallet",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
+    id: "tokens",
+    label: "Tokens",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
+    id: "staking",
+    label: "Staking",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+      </svg>
+    ),
+  },
+  {
+    id: "governance",
+    label: "Governance",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+  },
+  {
+    id: "account",
+    label: "Account",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+  },
+];
+
+function TabContent({ tab }: { tab: Tab }) {
+  switch (tab) {
+    case "wallet":
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <BalanceCard />
+              <SendForm />
+            </div>
+            <div className="space-y-6">
+              <FaucetCard />
+            </div>
+          </div>
+          <TransactionHistory />
+        </div>
+      );
+    case "tokens":
+      return (
+        <div className="space-y-6">
+          <TokenCard />
+        </div>
+      );
+    case "staking":
+      return (
+        <div className="space-y-6">
+          <StakingCard />
+          <VestingCard />
+        </div>
+      );
+    case "governance":
+      return <GovernanceTab />;
+    case "account":
+      return (
+        <div className="space-y-6">
+          <AccountDetails />
+        </div>
+      );
+  }
+}
+
+function GovernanceTab() {
+  return (
+    <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
+      <h3 className="text-lg font-semibold text-gray-200 mb-4">Governance</h3>
+      <p className="text-sm text-gray-400 mb-4">
+        View and vote on governance proposals. Proposals require staked tokens to vote.
+      </p>
+      <div className="text-center py-8 text-gray-500">
+        <svg className="w-12 h-12 mx-auto mb-3 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+        <p className="text-sm">
+          View proposals on{" "}
+          <a
+            href="https://testnet.solenchain.io/governance"
+            target="_blank"
+            rel="noopener"
+            className="text-emerald-400 hover:text-emerald-300"
+          >
+            SolenScan
+          </a>
+        </p>
+        <p className="text-xs text-gray-600 mt-2">
+          Use the CLI to submit proposals and vote: solen-cli vote &lt;key&gt; &lt;proposal-id&gt; --yes &lt;weight&gt;
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function WalletDashboard() {
   const { activeAccount, accounts } = useWallet();
   const [showCreate, setShowCreate] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>("wallet");
 
   if (accounts.length === 0) {
     return (
@@ -41,8 +163,9 @@ function WalletDashboard() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      {/* Account name + add button */}
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-200">
           {activeAccount?.name || "Dashboard"}
         </h2>
@@ -54,21 +177,26 @@ function WalletDashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <BalanceCard />
-          <SendForm />
-          <TokenCard />
-        </div>
-        <div className="space-y-6">
-          <FaucetCard />
-          <StakingCard />
-          <VestingCard />
-          <AccountDetails />
-        </div>
+      {/* Tab bar */}
+      <div className="flex gap-1 mb-6 bg-gray-900 rounded-xl p-1 border border-gray-800">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center ${
+              activeTab === tab.id
+                ? "bg-gray-800 text-emerald-400 shadow-sm"
+                : "text-gray-500 hover:text-gray-300 hover:bg-gray-800/50"
+            }`}
+          >
+            {tab.icon}
+            <span className="hidden sm:inline">{tab.label}</span>
+          </button>
+        ))}
       </div>
 
-      <TransactionHistory />
+      {/* Tab content */}
+      <TabContent tab={activeTab} />
 
       <CreateAccountModal open={showCreate} onClose={() => setShowCreate(false)} />
     </div>
