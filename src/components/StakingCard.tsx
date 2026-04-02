@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useWallet } from "../lib/context";
 import {
   getAccount,
+  getBalance,
   getValidators,
   getStakingInfo,
   submitOperation,
@@ -24,27 +25,40 @@ export function StakingCard() {
   const [action, setAction] = useState<"stake" | "unstake">("stake");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
 
-  // Fetch validators and staking info.
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const vals = await getValidators(network);
-        setValidators(vals);
+  // Build a set of validators the user is staking with.
+  const myDelegations = new Map<string, string>();
+  if (stakingInfo) {
+    for (const d of stakingInfo.delegations) {
+      myDelegations.set(d.validator, d.amount);
+    }
+  }
 
-        if (activeAccount) {
-          const info = await getStakingInfo(network, activeAccount.accountId);
-          setStakingInfo(info);
-        }
-      } catch {
-        // Network may not be available yet.
+  // Fetch validators, staking info, and balance.
+  const fetchData = useCallback(async () => {
+    try {
+      const vals = await getValidators(network);
+      setValidators(vals);
+
+      if (activeAccount) {
+        const [info, bal] = await Promise.all([
+          getStakingInfo(network, activeAccount.accountId),
+          getBalance(network, activeAccount.accountId),
+        ]);
+        setStakingInfo(info);
+        setBalance(bal);
       }
-    };
-
-    fetch();
-    const interval = setInterval(fetch, 10000);
-    return () => clearInterval(interval);
+    } catch {
+      // Network may not be available yet.
+    }
   }, [network, activeAccount]);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,6 +122,7 @@ export function StakingCard() {
           : `Unstaking ${amount} SOLEN from ${selectedValidator.slice(0, 8)}...`,
       });
       setAmount("");
+      fetchData();
     } catch (e) {
       setResult({
         success: false,
@@ -136,10 +151,20 @@ export function StakingCard() {
           <div className="space-y-2 pt-2 border-t border-gray-700/50">
             {stakingInfo.delegations.map((d, i) => {
               const validator = validators.find((v) => v.address === d.validator);
+              const isSelected = selectedValidator === d.validator;
               return (
-                <div key={i} className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2">
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSelectedValidator(d.validator)}
+                  className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-left transition-colors ${
+                    isSelected
+                      ? "bg-emerald-600/20 border border-emerald-500/50"
+                      : "bg-gray-800/50 border border-transparent hover:border-gray-600"
+                  }`}
+                >
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className={`w-2 h-2 rounded-full ${isSelected ? "bg-emerald-400" : "bg-emerald-500"}`} />
                     <div>
                       <span className="font-mono text-xs text-gray-300">{d.validator.slice(0, 12)}...{d.validator.slice(-6)}</span>
                       {validator?.is_genesis && (
@@ -148,7 +173,7 @@ export function StakingCard() {
                     </div>
                   </div>
                   <span className="text-sm font-medium text-emerald-400">{formatBalance(d.amount)} SOLEN</span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -169,25 +194,32 @@ export function StakingCard() {
       {/* Validators list */}
       <div className="mb-4">
         <label className="block text-sm text-gray-400 mb-2">Validators</label>
-        <div className="space-y-1 max-h-32 overflow-y-auto">
-          {validators.filter((v) => v.is_active).map((v) => (
-            <button
-              key={v.address}
-              type="button"
-              onClick={() => setSelectedValidator(v.address)}
-              className={`w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs transition-colors ${
-                selectedValidator === v.address
-                  ? "bg-emerald-600/20 border border-emerald-500/50 text-emerald-300"
-                  : "bg-gray-900/50 border border-gray-700/50 text-gray-400 hover:border-gray-600"
-              }`}
-            >
-              <span className="font-mono">{v.address.slice(0, 16)}...</span>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">{((v.commission_bps || 1000) / 100).toFixed(0)}% fee</span>
-                <span>{formatBalance(v.total_stake)} staked</span>
-              </div>
-            </button>
-          ))}
+        <div className="space-y-1 max-h-40 overflow-y-auto">
+          {validators.filter((v) => v.is_active).map((v) => {
+            const myStake = myDelegations.get(v.address);
+            const isSelected = selectedValidator === v.address;
+            return (
+              <button
+                key={v.address}
+                type="button"
+                onClick={() => setSelectedValidator(v.address)}
+                className={`w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs transition-colors ${
+                  isSelected
+                    ? "bg-emerald-600/20 border border-emerald-500/50 text-emerald-300"
+                    : "bg-gray-900/50 border border-gray-700/50 text-gray-400 hover:border-gray-600"
+                }`}
+              >
+                <span className="font-mono">{v.address.slice(0, 16)}...</span>
+                <div className="flex items-center gap-2">
+                  {myStake && (
+                    <span className="text-emerald-400 font-medium">Staking: {formatBalance(myStake)}</span>
+                  )}
+                  <span className="text-gray-500">{((v.commission_bps || 1000) / 100).toFixed(0)}% fee</span>
+                  <span>{formatBalance(v.total_stake)} staked</span>
+                </div>
+              </button>
+            );
+          })}
           {validators.length === 0 && (
             <div className="text-xs text-gray-600 text-center py-4">
               No validators found
@@ -251,6 +283,10 @@ export function StakingCard() {
               ? "Stake SOLEN"
               : "Unstake SOLEN"}
         </button>
+
+        <div className="text-xs text-gray-500 text-center">
+          Available balance: <span className="text-gray-300">{balance !== null ? formatBalance(balance) : "..."} SOLEN</span>
+        </div>
       </form>
 
       {result && (
