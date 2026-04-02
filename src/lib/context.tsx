@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
 import { type NetworkId, DEFAULT_NETWORK } from "./networks";
 import { type WalletAccount, loadAccounts, saveAccounts } from "./wallet";
 import { encrypt, decrypt, hashPassword } from "./crypto";
@@ -154,23 +154,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const value = useMemo<WalletState>(() => ({
+    network,
+    setNetwork,
+    accounts,
+    activeAccount,
+    setActiveAccount,
+    addAccount,
+    removeAccount,
+    isLocked,
+    hasPassword,
+    unlock,
+    lock,
+    setPassword: setPasswordFn,
+  }), [network, accounts, activeAccount, isLocked, hasPassword, unlock, lock, setPasswordFn, addAccount, removeAccount]);
+
   return (
-    <WalletContext.Provider
-      value={{
-        network,
-        setNetwork,
-        accounts,
-        activeAccount,
-        setActiveAccount,
-        addAccount,
-        removeAccount,
-        isLocked,
-        hasPassword,
-        unlock,
-        lock,
-        setPassword: setPasswordFn,
-      }}
-    >
+    <WalletContext.Provider value={value}>
       {children}
     </WalletContext.Provider>
   );

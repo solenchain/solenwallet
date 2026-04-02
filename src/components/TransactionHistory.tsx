@@ -133,11 +133,12 @@ export function TransactionHistory() {
     const contracts = new Set<string>();
     for (const tx of txs) {
       const info = getTransferInfo(tx);
-      if (info?.tokenContract && !tokenSymbols[info.tokenContract]) {
+      if (info?.tokenContract) {
         contracts.add(info.tokenContract);
       }
     }
     if (contracts.size === 0) return;
+    let cancelled = false;
     const lookups = Array.from(contracts).map(async (id) => {
       try {
         const res = await callView(network, id, "symbol");
@@ -151,10 +152,17 @@ export function TransactionHistory() {
       return [id, id.slice(0, 8) + "..."] as [string, string];
     });
     Promise.all(lookups).then((results) => {
-      const newSymbols = { ...tokenSymbols };
-      for (const [id, sym] of results) newSymbols[id] = sym;
-      setTokenSymbols(newSymbols);
+      if (cancelled) return;
+      setTokenSymbols((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const [id, sym] of results) {
+          if (next[id] !== sym) { next[id] = sym; changed = true; }
+        }
+        return changed ? next : prev;
+      });
     });
+    return () => { cancelled = true; };
   }, [txs, network]);
 
   const getTxType = (tx: Transaction): string => {
