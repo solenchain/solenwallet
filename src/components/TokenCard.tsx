@@ -10,6 +10,7 @@ import { signMessage, buildSigningMessage } from "../lib/wallet";
 import { networks } from "../lib/networks";
 import { httpFetch } from "../lib/http";
 import { hexToBytes } from "@noble/hashes/utils";
+import { openUrl } from "../lib/open";
 
 interface TokenInfo {
   contract: string;
@@ -206,10 +207,8 @@ export function TokenCard() {
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-gray-700/50">
               <span className="text-xs text-gray-500">Contract ID</span>
-              <a
-                href={`${networks[network].explorerUrl}/account/${selected.contract}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => openUrl(`${networks[network].explorerUrl}/account/${selected.contract}`)}
                 className="text-xs font-mono text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1"
                 title={selected.contract}
               >
@@ -217,7 +216,7 @@ export function TokenCard() {
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-              </a>
+              </button>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500">Decimals</span>
