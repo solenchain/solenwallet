@@ -60,6 +60,46 @@ export function StakingCard() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  const handleWithdraw = async () => {
+    if (!activeAccount) return;
+    setSubmitting(true);
+    setResult(null);
+
+    try {
+      const accountInfo = await getAccount(network, activeAccount.accountId);
+      const currentNonce = accountInfo.nonce;
+
+      const operation: UserOperation = {
+        sender: activeAccount.accountId,
+        nonce: currentNonce,
+        actions: [
+          {
+            type: "call",
+            to: STAKING_ADDRESS,
+            method: "withdraw",
+            args: "", // epoch read from chain meta by the system call
+          },
+        ],
+        max_fee: "100000",
+        signature: "",
+      };
+
+      const senderBytes = Array.from(hexToBytes(activeAccount.accountId));
+      const targetBytes = Array.from(hexToBytes(STAKING_ADDRESS));
+      const rustActions = [{ Call: { target: targetBytes, method: "withdraw", args: [] as number[] } }];
+      const sigMsg = buildSigningMessage(senderBytes, currentNonce, 100000, rustActions, networks[network].chainId);
+      operation.signature = await signMessage(activeAccount.secretKey, sigMsg);
+
+      await submitOperation(network, operation);
+      setResult({ success: true, message: "Withdraw submitted. Matured tokens will be credited to your balance." });
+      fetchData();
+    } catch (e) {
+      setResult({ success: false, message: e instanceof Error ? e.message : "Withdraw failed" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeAccount || !selectedValidator || !amount) return;
@@ -179,9 +219,18 @@ export function StakingCard() {
           </div>
         )}
         {stakingInfo && stakingInfo.pending_undelegations > 0 && (
-          <div className="flex items-center gap-1.5 text-xs text-yellow-500 mt-2 pt-2 border-t border-gray-700/50">
-            <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-            {stakingInfo.pending_undelegations} pending undelegation(s)
+          <div className="flex items-center justify-between text-xs text-yellow-500 mt-2 pt-2 border-t border-gray-700/50">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+              {stakingInfo.pending_undelegations} pending undelegation(s)
+            </div>
+            <button
+              onClick={handleWithdraw}
+              disabled={submitting}
+              className="bg-yellow-600 hover:bg-yellow-500 text-white text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {submitting ? "..." : "Withdraw"}
+            </button>
           </div>
         )}
         {stakingInfo && stakingInfo.delegations.length === 0 && (
