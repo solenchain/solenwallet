@@ -204,11 +204,14 @@ export function StakingCard() {
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${isSelected ? "bg-emerald-400" : "bg-emerald-500"}`} />
+                    <span className={`w-2 h-2 rounded-full ${validator && !validator.is_active ? "bg-red-500" : isSelected ? "bg-emerald-400" : "bg-emerald-500"}`} />
                     <div>
                       <span className="font-mono text-xs text-gray-300">{d.validator.slice(0, 12)}...{d.validator.slice(-6)}</span>
                       {validator?.is_genesis && (
                         <span className="ml-1 text-[10px] text-indigo-400">Genesis</span>
+                      )}
+                      {validator && !validator.is_active && (
+                        <span className="ml-1 text-[10px] text-red-400 font-medium">Jailed</span>
                       )}
                     </div>
                   </div>
@@ -244,7 +247,7 @@ export function StakingCard() {
       <div className="mb-4">
         <label className="block text-sm text-gray-400 mb-2">Validators</label>
         <div className="space-y-1 max-h-40 overflow-y-auto">
-          {validators.filter((v) => v.is_active).map((v) => {
+          {validators.map((v) => {
             const myStake = myDelegations.get(v.address);
             const isSelected = selectedValidator === v.address;
             return (
@@ -258,7 +261,16 @@ export function StakingCard() {
                     : "bg-gray-900/50 border border-gray-700/50 text-gray-400 hover:border-gray-600"
                 }`}
               >
-                <span className="font-mono">{v.address.slice(0, 16)}...</span>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${v.is_active ? "bg-emerald-500" : "bg-red-500"}`} />
+                  <span className="font-mono">{v.address.slice(0, 16)}...</span>
+                  {!v.is_active && (
+                    <span className="text-[10px] text-red-400 font-medium bg-red-500/10 px-1.5 py-0.5 rounded">Jailed</span>
+                  )}
+                  {v.is_genesis && (
+                    <span className="text-[10px] text-indigo-400">Genesis</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   {myStake && (
                     <span className="text-emerald-400 font-medium">Staking: {formatBalance(myStake)}</span>
