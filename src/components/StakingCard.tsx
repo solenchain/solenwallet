@@ -10,7 +10,7 @@ import {
   type StakingInfo,
   type UserOperation,
 } from "../lib/rpc";
-import { formatBalance, parseAmount, signMessage, buildSigningMessage } from "../lib/wallet";
+import { formatBalance, parseAmount, signMessage, buildSigningMessage, addressToBytes } from "../lib/wallet";
 import { networks } from "../lib/networks";
 import { hexToBytes } from "@noble/hashes/utils";
 
@@ -84,7 +84,7 @@ export function StakingCard() {
         signature: "",
       };
 
-      const senderBytes = Array.from(hexToBytes(activeAccount.accountId));
+      const senderBytes = Array.from(addressToBytes(activeAccount.accountId));
       const targetBytes = Array.from(hexToBytes(STAKING_ADDRESS));
       const rustActions = [{ Call: { target: targetBytes, method: "withdraw", args: [] as number[] } }];
       const sigMsg = buildSigningMessage(senderBytes, currentNonce, 100000, rustActions, networks[network].chainId);
@@ -111,7 +111,8 @@ export function StakingCard() {
       const rawAmount = parseAmount(amount);
 
       // Build system call args: validator[32 bytes hex] + amount[16 bytes LE hex]
-      const validatorHex = selectedValidator.padEnd(64, "0");
+      const validatorBytes = addressToBytes(selectedValidator);
+      const validatorHex = Array.from(validatorBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
       const amountBigInt = BigInt(rawAmount);
       const amountBytes = new Uint8Array(16);
       let val = amountBigInt;
@@ -147,7 +148,7 @@ export function StakingCard() {
       };
 
       // Build the signing message matching the Rust node format.
-      const senderBytes = Array.from(hexToBytes(activeAccount.accountId));
+      const senderBytes = Array.from(addressToBytes(activeAccount.accountId));
       const targetBytes = Array.from(hexToBytes(STAKING_ADDRESS));
       const argsBytes = Array.from(hexToBytes(args));
       const rustActions = [{ Call: { target: targetBytes, method, args: argsBytes } }];

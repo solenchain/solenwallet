@@ -1,5 +1,6 @@
 import { getNetworkConfig, type NetworkId } from "./networks";
 import { httpFetch } from "./http";
+import { addressToBytes } from "./wallet";
 
 let requestId = 0;
 
@@ -95,34 +96,34 @@ export interface Action {
 /**
  * Convert wallet-friendly operation format to Rust serde format.
  *
- * Wallet uses: { sender: "hex", actions: [{ type: "transfer", to: "hex", amount: "123" }] }
+ * Wallet uses: { sender: "base58-or-hex", actions: [{ type: "transfer", to: "base58-or-hex", amount: "123" }] }
  * Rust expects: { sender: [1,2,3...], actions: [{ Transfer: { to: [1,2,3...], amount: 123 } }] }
  */
 function toRustOperation(op: UserOperation): Record<string, unknown> {
-  const sender = hexToBytes(op.sender);
-  const signature = op.signature ? hexToBytes(op.signature) : [];
+  const sender = Array.from(addressToBytes(op.sender));
+  const signature = op.signature ? hexToNumberArray(op.signature) : [];
 
   const actions = op.actions.map((action) => {
     switch (action.type) {
       case "transfer":
         return {
           Transfer: {
-            to: hexToBytes(action.to || ""),
+            to: Array.from(addressToBytes(action.to || "")),
             amount: parseInt(action.amount || "0"),
           },
         };
       case "call":
         return {
           Call: {
-            target: hexToBytes(action.to || ""),
+            target: Array.from(addressToBytes(action.to || "")),
             method: action.method || "",
-            args: action.args ? hexToBytes(action.args) : [],
+            args: action.args ? hexToNumberArray(action.args) : [],
           },
         };
       case "deploy":
         return {
           Deploy: {
-            code: action.code ? hexToBytes(action.code) : [],
+            code: action.code ? hexToNumberArray(action.code) : [],
             salt: new Array(32).fill(0),
           },
         };
@@ -140,7 +141,8 @@ function toRustOperation(op: UserOperation): Record<string, unknown> {
   };
 }
 
-function hexToBytes(hex: string): number[] {
+/** Convert a hex string to a number array (for signatures, args, etc.) */
+function hexToNumberArray(hex: string): number[] {
   const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
   const bytes: number[] = [];
   for (let i = 0; i < clean.length; i += 2) {

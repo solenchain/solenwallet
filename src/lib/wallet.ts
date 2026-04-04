@@ -7,6 +7,73 @@ import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 (ed25519.etc as Record<string, unknown>).sha512Async = async (...m: Uint8Array[]) =>
   sha512(ed25519.etc.concatBytes(...m));
 
+// --- Base58 (Bitcoin alphabet) ---
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+export function base58Encode(bytes: Uint8Array): string {
+  // Count leading zeros
+  let zeros = 0;
+  for (const b of bytes) {
+    if (b !== 0) break;
+    zeros++;
+  }
+  // Convert to BigInt
+  let num = BigInt(0);
+  for (const b of bytes) {
+    num = num * BigInt(256) + BigInt(b);
+  }
+  // Encode
+  const chars: string[] = [];
+  while (num > BigInt(0)) {
+    const remainder = Number(num % BigInt(58));
+    num = num / BigInt(58);
+    chars.unshift(BASE58_ALPHABET[remainder]);
+  }
+  // Add leading '1's for each leading zero byte
+  for (let i = 0; i < zeros; i++) {
+    chars.unshift("1");
+  }
+  return chars.join("");
+}
+
+export function base58Decode(str: string): Uint8Array {
+  // Count leading '1's
+  let zeros = 0;
+  for (const c of str) {
+    if (c !== "1") break;
+    zeros++;
+  }
+  // Convert from base58 to BigInt
+  let num = BigInt(0);
+  for (const c of str) {
+    const idx = BASE58_ALPHABET.indexOf(c);
+    if (idx === -1) throw new Error(`Invalid Base58 character: ${c}`);
+    num = num * BigInt(58) + BigInt(idx);
+  }
+  // Convert BigInt to bytes
+  const hex = num === BigInt(0) ? "" : num.toString(16).padStart(2, "0");
+  const paddedHex = hex.length % 2 ? "0" + hex : hex;
+  const byteLen = paddedHex.length / 2;
+  const result = new Uint8Array(zeros + byteLen);
+  for (let i = 0; i < byteLen; i++) {
+    result[zeros + i] = parseInt(paddedHex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return result;
+}
+
+/**
+ * Detect whether a string is hex or Base58, and return the raw 32-byte array.
+ * - 64-char hex string (with optional 0x prefix) -> hex decode
+ * - Otherwise -> Base58 decode
+ */
+export function addressToBytes(address: string): Uint8Array {
+  const clean = address.startsWith("0x") ? address.slice(2) : address;
+  if (/^[0-9a-fA-F]{64}$/.test(clean)) {
+    return hexToBytes(clean);
+  }
+  return base58Decode(address);
+}
+
 export interface Keypair {
   publicKey: string; // hex
   secretKey: string; // hex (64 bytes: 32 secret + 32 public)
@@ -14,7 +81,7 @@ export interface Keypair {
 
 export interface WalletAccount {
   name: string;
-  accountId: string; // hex, derived from public key
+  accountId: string; // Base58, derived from public key
   publicKey: string;
   secretKey: string; // encrypted or raw for now
 }
@@ -44,9 +111,9 @@ export async function signMessage(secretHex: string, message: Uint8Array): Promi
 }
 
 export function publicKeyToAccountId(pubKeyHex: string): string {
-  // Account ID IS the public key. No derivation needed.
+  // Account ID IS the public key, encoded as Base58.
   // Ed25519 public keys are always 32 bytes (64 hex chars).
-  return pubKeyHex;
+  return base58Encode(hexToBytes(pubKeyHex));
 }
 
 const STORAGE_KEY = "solen_wallet_accounts";

@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useWallet } from "../lib/context";
 import { getAccount, submitOperation, type UserOperation } from "../lib/rpc";
-import { parseAmount, signMessage, buildSigningMessage } from "../lib/wallet";
+import { parseAmount, signMessage, buildSigningMessage, addressToBytes } from "../lib/wallet";
 import { networks } from "../lib/networks";
 import { encryptOperation } from "../lib/encrypted";
-import { hexToBytes } from "@noble/hashes/utils";
 
 
 export function SendForm() {
@@ -44,8 +43,8 @@ export function SendForm() {
       };
 
       // Build signing message matching the Rust node format.
-      const senderBytes = Array.from(hexToBytes(activeAccount.accountId));
-      const toBytes = Array.from(hexToBytes(recipient));
+      const senderBytes = Array.from(addressToBytes(activeAccount.accountId));
+      const toBytes = Array.from(addressToBytes(recipient));
       const rustActions = [{ Transfer: { to: toBytes, amount: parseInt(rawAmount) } }];
       const sigMsg = buildSigningMessage(senderBytes, currentNonce, 10000, rustActions, networks[network].chainId);
       operation.signature = await signMessage(activeAccount.secretKey, sigMsg);
@@ -96,7 +95,7 @@ export function SendForm() {
             type="text"
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
-            placeholder="Account address (hex)"
+            placeholder="Account address (Base58 or hex)"
             className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500/50 font-mono"
           />
         </div>

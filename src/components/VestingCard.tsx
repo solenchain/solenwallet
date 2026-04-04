@@ -7,7 +7,7 @@ import {
   type VestingInfo,
   type UserOperation,
 } from "../lib/rpc";
-import { formatBalance, signMessage, buildSigningMessage } from "../lib/wallet";
+import { formatBalance, signMessage, buildSigningMessage, addressToBytes } from "../lib/wallet";
 import { networks } from "../lib/networks";
 import { hexToBytes } from "@noble/hashes/utils";
 
@@ -60,7 +60,7 @@ export function VestingCard() {
         signature: "",
       };
 
-      const senderBytes = Array.from(hexToBytes(activeAccount.accountId));
+      const senderBytes = Array.from(addressToBytes(activeAccount.accountId));
       const targetBytes = Array.from(hexToBytes(VESTING_ADDRESS));
       const rustActions = [{ Call: { target: targetBytes, method: "claim", args: [] } }];
       const sigMsg = buildSigningMessage(senderBytes, currentNonce, 100000, rustActions, networks[network].chainId);

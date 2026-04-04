@@ -6,7 +6,7 @@ import {
   submitOperation,
   type UserOperation,
 } from "../lib/rpc";
-import { signMessage, buildSigningMessage } from "../lib/wallet";
+import { signMessage, buildSigningMessage, addressToBytes } from "../lib/wallet";
 import { networks, getNetworkConfig } from "../lib/networks";
 import { httpFetch } from "../lib/http";
 import { hexToBytes } from "@noble/hashes/utils";
@@ -147,7 +147,8 @@ export function TokenCard() {
       const currentNonce = accountInfo.nonce;
 
       // Build args: to[32] + amount[16 LE]
-      const toHex = recipient.replace(/^0x/, "").padEnd(64, "0");
+      const recipientBytes = addressToBytes(recipient);
+      const toHex = Array.from(recipientBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
       const token = tokens.find((t) => t.contract === selectedToken);
       const amountBigInt = parseTokenAmount(amount, token?.decimals ?? 8);
       const amountBytes = new Uint8Array(16);
@@ -174,8 +175,8 @@ export function TokenCard() {
         signature: "",
       };
 
-      const senderBytes = Array.from(hexToBytes(activeAccount.accountId));
-      const targetBytes = Array.from(hexToBytes(selectedToken));
+      const senderBytes = Array.from(addressToBytes(activeAccount.accountId));
+      const targetBytes = Array.from(addressToBytes(selectedToken));
       const argsBytes = Array.from(hexToBytes(args));
       const rustActions = [{ Call: { target: targetBytes, method: "transfer", args: argsBytes } }];
       const sigMsg = buildSigningMessage(senderBytes, currentNonce, 100000, rustActions, networks[network].chainId);
