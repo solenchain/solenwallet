@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
 import { type NetworkId, DEFAULT_NETWORK } from "./networks";
-import { type WalletAccount, loadAccounts, saveAccounts } from "./wallet";
+import { type WalletAccount, loadAccounts, saveAccounts, publicKeyToAccountId } from "./wallet";
 import { encrypt, decrypt, hashPassword } from "./crypto";
 
 const DEFAULT_LOCK_MS = 10 * 60 * 1000; // 10 minutes
@@ -101,6 +101,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [activeAccount]);
 
   const lock = useCallback(() => {
+    sessionStorage.removeItem("solen_session_key");
     setIsLocked(true);
     setAccounts([]);
     setActiveAccount(null);
@@ -118,6 +119,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (encryptedData) {
         const json = await decrypt(encryptedData, password);
         const decrypted: WalletAccount[] = JSON.parse(json);
+        // Migrate old hex accountIds to Base58.
+        let migrated = false;
+        for (const acc of decrypted) {
+          if (acc.accountId.length === 64 && /^[0-9a-fA-F]+$/.test(acc.accountId)) {
+            acc.accountId = publicKeyToAccountId(acc.accountId);
+            migrated = true;
+          }
+        }
+        if (migrated) {
+          // Re-encrypt with migrated data.
+          const reEncrypted = await encrypt(JSON.stringify(decrypted), password);
+          localStorage.setItem("solen_wallet_encrypted", reEncrypted);
+        }
         setAccounts(decrypted);
       } else {
         // Migration: accounts stored unencrypted, encrypt them now
@@ -129,6 +143,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem("solen_wallet_accounts");
         }
       }
+      // Store password in session for re-encryption on account add/remove.
+      sessionStorage.setItem("solen_session_key", password);
       setIsLocked(false);
       resetTimer();
       return true;
@@ -212,25 +228,44 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LOCK_TIMEOUT_KEY, String(ms));
   }, []);
 
+  // Persist accounts to the correct storage (encrypted or plaintext).
+  const persistAccounts = useCallback(async (accs: WalletAccount[]) => {
+    const pwHash = localStorage.getItem("solen_pw_hash");
+    if (pwHash) {
+      // Password is set — we need to encrypt. But we don't have the password
+      // in memory after initial unlock. Store to a session key instead.
+      // The session-encrypted data is re-encrypted on lock/password change.
+      const encKey = sessionStorage.getItem("solen_session_key");
+      if (encKey) {
+        const encrypted = await encrypt(JSON.stringify(accs), encKey);
+        localStorage.setItem("solen_wallet_encrypted", encrypted);
+      }
+      // Also save plaintext as fallback (removed on next lock).
+      saveAccounts(accs);
+    } else {
+      saveAccounts(accs);
+    }
+  }, []);
+
   const addAccount = useCallback((a: WalletAccount) => {
     setAccounts((prev) => {
       const updated = [...prev, a];
-      saveAccounts(updated);
+      persistAccounts(updated);
       return updated;
     });
     setActiveAccount((prev) => prev ?? a);
-  }, []);
+  }, [persistAccounts]);
 
   const removeAccount = useCallback((accountId: string) => {
     setAccounts((prev) => {
       const updated = prev.filter((a) => a.accountId !== accountId);
-      saveAccounts(updated);
+      persistAccounts(updated);
       return updated;
     });
     setActiveAccount((prev) =>
       prev?.accountId === accountId ? null : prev,
     );
-  }, []);
+  }, [persistAccounts]);
 
   const value = useMemo<WalletState>(() => ({
     network,
