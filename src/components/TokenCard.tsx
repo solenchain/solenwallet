@@ -77,6 +77,10 @@ export function TokenCard() {
         }
       } catch {}
 
+      // Convert account ID to hex for callView args.
+      const accountBytes = addressToBytes(activeAccount.accountId);
+      const accountHex = Array.from(accountBytes).map(b => b.toString(16).padStart(2, "0")).join("");
+
       // Fetch all contracts in parallel.
       const results = await Promise.all(
         contracts.map(async (contract): Promise<TokenInfo | null> => {
@@ -84,7 +88,7 @@ export function TokenCard() {
             const cached = metaCacheRef.current.get(contract);
 
             // Always fetch balance; only fetch metadata if not cached.
-            const balPromise = callView(network, contract, "balance_of", activeAccount.accountId);
+            const balPromise = callView(network, contract, "balance_of", accountHex);
             let name: string, symbol: string, decimals: number;
 
             if (cached) {
